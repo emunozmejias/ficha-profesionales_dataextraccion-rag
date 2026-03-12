@@ -1,0 +1,7 @@
+node_modules/
+.env
+# PDFs subidos por la aplicación (no versionar)
+backend/uploads/
+build/
+.DS_Store
+*.log
