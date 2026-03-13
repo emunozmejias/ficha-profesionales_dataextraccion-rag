@@ -10,48 +10,59 @@ const RAG_TOP_K = parseInt(process.env.RAG_TOP_K || '5', 10);
 const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-20250514';
 
 /**
- * Convierte el JSON de un CV en fragmentos de texto para embedir (por sección)
+ * Prefijo para que cada chunk identifique al profesional (mejora respuestas RAG con varios CVs).
+ */
+function chunkWithProfesional(nombre, contenido) {
+    const nombreSafe = (nombre || 'N/A').trim();
+    return `Profesional: ${nombreSafe}. ${contenido}`.trim();
+}
+
+/**
+ * Convierte el JSON de un CV en fragmentos de texto para embedir (por sección).
+ * Cada chunk incluye al inicio "Profesional: [nombre]. " para que la respuesta RAG
+ * pueda indicar todos los profesionales de los que se obtuvieron fragmentos.
  * @param {Object} cvData - Objeto con profesional, educacion, experiencias, etc.
  * @returns {string[]} - Array de textos
  */
 function buildChunksFromCVData(cvData) {
     const chunks = [];
     const p = cvData.profesional || {};
+    const nombre = p.nombre || 'N/A';
 
-    chunks.push(
+    chunks.push(chunkWithProfesional(nombre,
         `Datos del profesional: Nombre: ${p.nombre || 'N/A'}. ` +
         `RUT: ${p.rut || 'N/A'}. Email: ${p.email || 'N/A'}. Teléfono: ${p.telefono || 'N/A'}. ` +
         `Ciudad: ${p.ciudad || 'N/A'}. Resumen: ${(p.resumen || '').slice(0, 500)}.`
-    );
+    ));
 
     (cvData.educacion || []).forEach((e, i) => {
-        chunks.push(
+        chunks.push(chunkWithProfesional(nombre,
             `Educación ${i + 1}: ${e.titulo || ''} en ${e.institucion || ''}. ` +
             `Año egreso: ${e.anio_egreso || 'N/A'}. Nivel: ${e.nivel || 'N/A'}.`
-        );
+        ));
     });
 
     (cvData.certificaciones || []).forEach((c, i) => {
-        chunks.push(
+        chunks.push(chunkWithProfesional(nombre,
             `Certificación ${i + 1}: ${c.nombre || ''}. ` +
             `Institución: ${c.institucion || 'N/A'}. Año: ${c.anio || 'N/A'}. Estado: ${c.estado || 'completado'}.`
-        );
+        ));
     });
 
     (cvData.experiencias || []).forEach((ex, i) => {
         const skills = (ex.skills_utilizadas || []).join(', ');
-        chunks.push(
+        chunks.push(chunkWithProfesional(nombre,
             `Experiencia ${i + 1}: En ${ex.empresa || ''} como ${ex.cargo || ''}. ` +
             `Desde ${ex.fecha_inicio || 'N/A'} hasta ${ex.fecha_fin || 'actualidad'}. ` +
             `Es actual: ${ex.es_actual ? 'Sí' : 'No'}. ` +
             `Descripción: ${(ex.descripcion || '').slice(0, 400)}. ` +
             (skills ? `Tecnologías: ${skills}.` : '')
-        );
+        ));
     });
 
     const skillsList = (cvData.skills_generales || []).map(s => s.nombre).filter(Boolean);
     if (skillsList.length) {
-        chunks.push(`Skills y tecnologías: ${skillsList.join(', ')}.`);
+        chunks.push(chunkWithProfesional(nombre, `Skills y tecnologías: ${skillsList.join(', ')}.`));
     }
 
     return chunks.filter(c => c && c.trim().length > 0);
