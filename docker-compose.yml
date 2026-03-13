@@ -1,0 +1,81 @@
+# Ficha de Profesionales - orquestación de contenedores
+# Frontend: http://localhost:3010  |  Backend: http://localhost:3011  |  DB: localhost:5433
+#
+# Opcional: crear .env en la raíz del proyecto con DB_PASSWORD, ANTHROPIC_API_KEY, OPENAI_API_KEY
+# para no pasarlos por línea de comandos. Si existe backend/.env, se puede usar env_file ahí.
+
+services:
+  db:
+    build:
+      context: ./database
+      dockerfile: Dockerfile
+    image: ficha-profesionales-db:latest
+    container_name: ficha-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ficha_profesionales
+    ports:
+      - "5433:5432"
+    volumes:
+      - ficha_db_data:/var/lib/postgresql/data
+    networks:
+      - ficha-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ficha_profesionales"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: ficha-profesionales-backend:latest
+    container_name: ficha-backend
+    env_file:
+      - ./backend/.env
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ficha_profesionales
+      DB_USER: postgres
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      CORS_ORIGIN: http://localhost:3010
+      UPLOADS_PATH: /app/uploads
+      # ANTHROPIC_API_KEY, OPENAI_API_KEY, CLAUDE_MODEL, etc. se cargan desde env_file (backend/.env)
+      # y no se sobrescriben aquí para que el contenedor use las claves de ese archivo
+    ports:
+      - "3011:3001"
+    volumes:
+      - ficha_uploads:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - ficha-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: http://localhost:3011/api
+    image: ficha-profesionales-frontend:latest
+    container_name: ficha-frontend
+    ports:
+      - "3010:80"
+    depends_on:
+      - backend
+    networks:
+      - ficha-network
+
+networks:
+  ficha-network:
+    driver: bridge
+
+volumes:
+  ficha_db_data:
+  ficha_uploads:

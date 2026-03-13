@@ -301,6 +301,43 @@ npm run build
 
 ---
 
+## 🐳 Ejecución con Docker
+
+En la raíz del proyecto hay un `docker-compose.yml` que levanta base de datos, backend y frontend en una red interna `ficha-network`.
+
+**Puertos en el host:**
+
+| Servicio | URL / Puerto |
+|----------|---------------|
+| Frontend | http://localhost:3010 |
+| Backend  | http://localhost:3011 |
+| PostgreSQL | localhost:**5433** (el 5432 del host queda libre) |
+
+**Pasos:**
+
+1. Opcional: crea un `.env` en la **raíz del proyecto** con las variables que quieras pasar a los contenedores (por ejemplo para no escribirlas en la terminal):
+   ```env
+   DB_PASSWORD=postgres
+   ANTHROPIC_API_KEY=sk-ant-...
+   OPENAI_API_KEY=sk-...
+   ```
+
+2. Construir y levantar los tres contenedores:
+   ```bash
+   docker compose up -d --build
+   ```
+
+3. La base de datos se inicializa sola con `schema.sql` y `rag_schema.sql` la primera vez. Abre http://localhost:3010 y usa la aplicación.
+
+4. Para parar:
+   ```bash
+   docker compose down
+   ```
+
+Los PDFs subidos se persisten en el volumen `ficha_uploads` y los datos de PostgreSQL en `ficha_db_data`.
+
+---
+
 ## 📌 Notas Importantes
 
 - Los PDFs se guardan en `backend/uploads/` con timestamp en el nombre.
