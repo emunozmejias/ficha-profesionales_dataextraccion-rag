@@ -1,8 +1,11 @@
 # Ficha de Profesionales - orquestación de contenedores
-# Frontend: http://localhost:3010  |  Backend: http://localhost:3011  |  DB: localhost:5433
+# Frontend: puerto 3010  |  Backend: puerto 3011  |  DB: puerto 5433
 #
-# Opcional: crear .env en la raíz del proyecto con DB_PASSWORD, ANTHROPIC_API_KEY, OPENAI_API_KEY
-# para no pasarlos por línea de comandos. Si existe backend/.env, se puede usar env_file ahí.
+# En servidor (ej. IP 10.50.1.16): crear .env en la raíz con:
+#   REACT_APP_API_URL=http://10.50.1.16:3011/api
+#   CORS_ORIGIN=http://10.50.1.16:3010
+# y en backend/.env poner CORS_ORIGIN=http://10.50.1.16:3010
+# Luego: docker compose build frontend && docker compose up -d
 
 services:
   db:
@@ -43,7 +46,7 @@ services:
       DB_NAME: ficha_profesionales
       DB_USER: postgres
       DB_PASSWORD: ${DB_PASSWORD:-postgres}
-      CORS_ORIGIN: http://localhost:3010
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3010}
       UPLOADS_PATH: /app/uploads
       # ANTHROPIC_API_KEY, OPENAI_API_KEY, CLAUDE_MODEL, etc. se cargan desde env_file (backend/.env)
       # y no se sobrescriben aquí para que el contenedor use las claves de ese archivo
@@ -62,7 +65,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        REACT_APP_API_URL: http://localhost:3011/api
+        REACT_APP_API_URL: ${REACT_APP_API_URL:-http://localhost:3011/api}
     image: ficha-profesionales-frontend:latest
     container_name: ficha-frontend
     ports:
